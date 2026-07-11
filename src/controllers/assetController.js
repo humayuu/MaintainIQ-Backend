@@ -1,4 +1,5 @@
 import Asset from '../models/Asset.js';
+import AssetHistory from '../models/AssetHistory.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { buildPublicAssetUrl, generateQrDataUrl } from '../utils/qr.js';
 
@@ -173,4 +174,31 @@ export const getAssetLabel = asyncHandler(async (req, res) => {
       scanInstruction: 'Scan this code to report an issue or view this asset.',
     },
   });
+});
+
+/**
+ * GET /api/assets/:id/history  (any authenticated role)
+ * Full append-only history timeline, newest first. Each entry shows the
+ * timestamp, actor name (if any), action, and the related issue's number.
+ */
+export const getAssetHistory = asyncHandler(async (req, res) => {
+  const asset = await Asset.findById(req.params.id).select('_id');
+  if (!asset) {
+    throw httpError('Asset not found', 404);
+  }
+
+  const entries = await AssetHistory.find({ asset: asset._id })
+    .sort({ timestamp: -1 })
+    .populate('actor', 'name')
+    .populate('relatedIssue', 'issueNumber')
+    .lean();
+
+  const history = entries.map((e) => ({
+    timestamp: e.timestamp,
+    actor: e.actor?.name ?? null,
+    action: e.action,
+    relatedIssue: e.relatedIssue?.issueNumber ?? null,
+  }));
+
+  res.status(200).json({ success: true, data: { history } });
 });

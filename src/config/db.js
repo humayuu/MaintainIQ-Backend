@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 /**
  * Establish the MongoDB connection using MONGODB_URI from the environment.
@@ -9,11 +9,11 @@ const connectDB = async () => {
   const uri = process.env.MONGODB_URI;
 
   if (!uri) {
-    throw new Error('MONGODB_URI is not defined in the environment');
+    throw new Error("MONGODB_URI is not defined in the environment");
   }
 
   const conn = await mongoose.connect(uri);
-  console.log(`✅ MongoDB connected: ${conn.connection.host}`);
+  console.log(`MongoDB connected: ${conn.connection.host}`);
 
   return conn;
 };

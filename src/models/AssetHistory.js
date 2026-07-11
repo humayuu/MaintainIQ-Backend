@@ -10,7 +10,8 @@ const assetHistorySchema = new mongoose.Schema({
   actor: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
+    // Optional: public/anonymous events (e.g. an issue reported via the QR page)
+    // have no authenticated user. Internal actions still set this.
   },
   action: {
     type: String,

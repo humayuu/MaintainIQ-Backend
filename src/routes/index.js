@@ -3,6 +3,7 @@ import { Router } from 'express';
 import healthRoutes from './health.routes.js';
 import authRoutes from './authRoutes.js';
 import assetRoutes from './assetRoutes.js';
+import issueRoutes from './issueRoutes.js';
 import publicRoutes from './publicRoutes.js';
 
 const router = Router();
@@ -15,6 +16,9 @@ router.use('/auth', authRoutes);
 
 // → /api/assets/*  (protected)
 router.use('/assets', assetRoutes);
+
+// → /api/issues/*  (protected)
+router.use('/issues', issueRoutes);
 
 // → /api/public/*  (no auth)
 router.use('/public', publicRoutes);
