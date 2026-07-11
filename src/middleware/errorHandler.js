@@ -31,6 +31,17 @@ const errorHandler = (err, req, res, next) => {
     message = `Invalid value for ${err.path}`;
   }
 
+  // Multer upload error (file too large, too many files, etc.) → 400.
+  if (err.name === 'MulterError') {
+    statusCode = 400;
+    message =
+      err.code === 'LIMIT_FILE_SIZE'
+        ? 'File too large (max 15MB each)'
+        : err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE'
+          ? 'Too many files (max 5)'
+          : err.message;
+  }
+
   // Duplicate key.
   if (err.code === 11000) {
     statusCode = 409;

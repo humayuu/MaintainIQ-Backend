@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Asset from '../models/Asset.js';
 import AssetHistory from '../models/AssetHistory.js';
 import asyncHandler from '../utils/asyncHandler.js';
@@ -9,6 +10,28 @@ const httpError = (message, statusCode) => {
   return err;
 };
 
+/**
+ * assignedTechnician is a User ObjectId ref. Clients sometimes send an empty
+ * string (blank form field) or a populated {_id,name} object — normalize both:
+ * blank/absent → leave the field unset (no crash), a populated object → its id,
+ * and reject any non-empty value that is not a valid ObjectId with a clean 400
+ * (a bare string like "" or "John" would otherwise throw a raw CastError 500).
+ */
+const normalizeAssignedTechnician = (payload) => {
+  if (!('assignedTechnician' in payload)) return;
+  const value = payload.assignedTechnician;
+  const id = value && typeof value === 'object' ? value._id ?? value.id : value;
+
+  if (id == null || (typeof id === 'string' && id.trim() === '')) {
+    delete payload.assignedTechnician; // treat blank as "not provided"
+    return;
+  }
+  if (!mongoose.isValidObjectId(id)) {
+    throw httpError('assignedTechnician must be a valid technician id', 400);
+  }
+  payload.assignedTechnician = id;
+};
+
 // Fields an admin may set on create / update. publicSlug is intentionally NOT
 // here — it is derived once by the model and must never be client-controlled.
 const CREATABLE_FIELDS = [
@@ -17,6 +40,10 @@ const CREATABLE_FIELDS = [
   'category',
   'location',
   'condition',
+  'manufacturer',
+  'model',
+  'serialNumber',
+  'description',
   'status',
   'assignedTechnician',
   'lastServiceDate',
@@ -40,6 +67,7 @@ const pick = (source, fields) =>
  */
 export const createAsset = asyncHandler(async (req, res) => {
   const payload = pick(req.body, CREATABLE_FIELDS);
+  normalizeAssignedTechnician(payload);
 
   // Clear, explicit duplicate check (the unique index is the ultimate guard,
   // but this gives a friendlier message than a raw duplicate-key error).
@@ -69,6 +97,14 @@ export const listAssets = asyncHandler(async (req, res) => {
     if (req.query[key]) filter[key] = req.query[key];
   }
 
+  // Free-text search across the human-readable fields. Escape regex specials so
+  // user input can't create an invalid or catastrophic pattern.
+  if (req.query.search && req.query.search.trim()) {
+    const escaped = req.query.search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rx = new RegExp(escaped, 'i');
+    filter.$or = [{ name: rx }, { assetCode: rx }, { category: rx }, { location: rx }];
+  }
+
   const [assets, total] = await Promise.all([
     Asset.find(filter)
       .populate('assignedTechnician', 'name')
@@ -90,6 +126,25 @@ export const listAssets = asyncHandler(async (req, res) => {
       },
     },
   });
+});
+
+/**
+ * GET /api/assets/stats  (any authenticated role)
+ * Fleet totals + a per-status breakdown. Computed with an aggregation so the
+ * dashboard never has to fetch (and cap) the full asset list.
+ */
+export const getAssetStats = asyncHandler(async (req, res) => {
+  const [total, grouped] = await Promise.all([
+    Asset.countDocuments(),
+    Asset.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+  ]);
+
+  const byStatus = {};
+  grouped.forEach((g) => {
+    if (g._id) byStatus[g._id] = g.count;
+  });
+
+  res.status(200).json({ success: true, data: { total, byStatus } });
 });
 
 /**
@@ -115,6 +170,7 @@ export const updateAsset = asyncHandler(async (req, res) => {
   }
 
   const updates = pick(req.body, UPDATABLE_FIELDS);
+  normalizeAssignedTechnician(updates);
 
   // Guard against a duplicate assetCode if it's being changed.
   if (updates.assetCode && updates.assetCode !== asset.assetCode) {

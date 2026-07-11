@@ -1,6 +1,11 @@
 import { Router } from 'express';
 
-import { listIssues, assignIssue } from '../controllers/issueController.js';
+import {
+  listIssues,
+  getIssueStats,
+  getIssue,
+  assignIssue,
+} from '../controllers/issueController.js';
 import {
   createMaintenance,
   updateStatus,
@@ -16,6 +21,12 @@ router.use(protect);
 
 // GET /api/issues  (any authenticated role)
 router.get('/', listIssues);
+
+// Aggregate stats — MUST be before '/:id' so 'stats' isn't captured as an id.
+router.get('/stats', getIssueStats);
+
+// GET /api/issues/:id  (any authenticated role)
+router.get('/:id', getIssue);
 
 // PUT /api/issues/:id/assign  (admin only)
 router.put('/:id/assign', authorize('admin'), assignIssue);

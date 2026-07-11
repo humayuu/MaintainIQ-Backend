@@ -23,6 +23,23 @@ const assetSchema = new mongoose.Schema({
   condition: {
     type: String,
   },
+  // Descriptive nameplate fields (all optional). Surfaced on the asset detail
+  // screen and settable from the create/edit forms.
+  manufacturer: {
+    type: String,
+    trim: true,
+  },
+  model: {
+    type: String,
+    trim: true,
+  },
+  serialNumber: {
+    type: String,
+    trim: true,
+  },
+  description: {
+    type: String,
+  },
   status: {
     type: String,
     enum: [
