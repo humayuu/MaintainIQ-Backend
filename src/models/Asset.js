@@ -66,9 +66,13 @@ const assetSchema = new mongoose.Schema({
  * This runs on `validate` (not `save`) because publicSlug is `required` — the
  * value must exist before Mongoose runs required-field validation. Using
  * `this.invalidate` produces a proper ValidationError the API can surface as 400.
+ *
+ * publicSlug is generated ONCE, only when missing (i.e. on creation). It is
+ * deliberately NOT regenerated when assetCode changes, so the public QR URL of
+ * an asset stays stable for the life of the asset — printed labels never break.
  */
 assetSchema.pre('validate', function () {
-  if (this.assetCode && (this.isModified('assetCode') || !this.publicSlug)) {
+  if (this.assetCode && !this.publicSlug) {
     this.publicSlug = this.assetCode
       .toString()
       .trim()
