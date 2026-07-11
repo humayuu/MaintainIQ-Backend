@@ -12,7 +12,7 @@ const connectDB = async () => {
     throw new Error("MONGODB_URI is not defined in the environment");
   }
 
-  const conn = await mongoose.connect(uri);
+  const conn = await mongoose.connect(uri, { dbName: "maintainiq_db" });
   console.log(`MongoDB connected: ${conn.connection.host}`);
 
   return conn;
