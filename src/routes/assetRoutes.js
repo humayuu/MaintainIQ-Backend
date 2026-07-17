@@ -4,6 +4,7 @@ import {
   createAsset,
   listAssets,
   getAssetStats,
+  getMaintenanceSchedule,
   getAsset,
   updateAsset,
   getAssetQr,
@@ -24,6 +25,9 @@ router.get('/', listAssets); // any authenticated role
 // Aggregate stats — MUST be declared before '/:id' so 'stats' isn't captured
 // as an asset id.
 router.get('/stats', getAssetStats); // any authenticated role
+
+// Maintenance calendar feed — also before '/:id' so 'schedule' isn't an id.
+router.get('/schedule', getMaintenanceSchedule); // any authenticated role
 
 // Single asset
 router.get('/:id', getAsset); // any authenticated role

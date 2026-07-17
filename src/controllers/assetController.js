@@ -149,10 +149,44 @@ export const getAssetStats = asyncHandler(async (req, res) => {
 });
 
 /**
+ * GET /api/assets/schedule  (any authenticated role)
+ * Assets that have an upcoming (or overdue) service date, for the maintenance
+ * calendar. Optional ?from=&to= (ISO dates) restrict to a window; otherwise all
+ * assets with a nextServiceDate are returned. Sorted soonest-first.
+ */
+export const getMaintenanceSchedule = asyncHandler(async (req, res) => {
+  const filter = { nextServiceDate: { $ne: null } };
+
+  const range = {};
+  if (req.query.from) {
+    const from = new Date(req.query.from);
+    if (!Number.isNaN(from.valueOf())) range.$gte = from;
+  }
+  if (req.query.to) {
+    const to = new Date(req.query.to);
+    if (!Number.isNaN(to.valueOf())) range.$lte = to;
+  }
+  if (range.$gte || range.$lte) filter.nextServiceDate = range;
+
+  const assets = await Asset.find(filter)
+    .select('name assetCode category location status lastServiceDate nextServiceDate')
+    .sort({ nextServiceDate: 1 })
+    .lean();
+
+  res.status(200).json({ success: true, data: { assets } });
+});
+
+/**
  * GET /api/assets/:id  (any authenticated role)
  * Full internal detail, assignedTechnician name populated.
  */
 export const getAsset = asyncHandler(async (req, res) => {
+  // Guard against non-ObjectId ids (e.g. a mis-routed path segment) so they
+  // return a clean 404 instead of a raw Mongoose CastError 500.
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    throw httpError('Asset not found', 404);
+  }
+
   const asset = await Asset.findById(req.params.id).populate('assignedTechnician', 'name');
   if (!asset) {
     throw httpError('Asset not found', 404);
