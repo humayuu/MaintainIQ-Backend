@@ -3,6 +3,7 @@ import Asset from '../models/Asset.js';
 import AssetHistory from '../models/AssetHistory.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { buildPublicAssetUrl, generateQrDataUrl } from '../utils/qr.js';
+import { invalidatePublicAsset } from '../services/assetPublicService.js';
 
 const httpError = (message, statusCode) => {
   const err = new Error(message);
@@ -186,6 +187,10 @@ export const updateAsset = asyncHandler(async (req, res) => {
 
   await asset.save(); // runs validation (incl. service-date check) via the model hook
   await asset.populate('assignedTechnician', 'name');
+
+  // The public (QR) view of this asset is cached by slug — drop it so edits to
+  // status/condition/service dates are reflected on the next scan immediately.
+  invalidatePublicAsset(asset.publicSlug);
 
   res.status(200).json({ success: true, data: { asset } });
 });

@@ -66,3 +66,55 @@ export const loginUser = async ({ email, password }) => {
 
   return sanitize(user);
 };
+
+/**
+ * Update a user's own editable profile fields (currently name + avatarUrl).
+ * Only the whitelisted keys that are actually present are applied — email and
+ * role are intentionally NOT editable here. Returns the sanitized user.
+ */
+export const updateProfile = async (userId, { name, avatarUrl } = {}) => {
+  const updates = {};
+  if (name !== undefined) {
+    if (!String(name).trim()) throw httpError('Name cannot be empty', 400);
+    updates.name = String(name).trim();
+  }
+  if (avatarUrl !== undefined) {
+    updates.avatarUrl = String(avatarUrl).trim();
+  }
+
+  const user = await User.findByIdAndUpdate(userId, updates, {
+    new: true,
+    runValidators: true,
+  });
+  if (!user) throw httpError('User not found', 404);
+
+  return sanitize(user);
+};
+
+/**
+ * Change a user's own password. Verifies the current password first (so a
+ * stolen session can't silently reset it), then hashes and stores the new one.
+ * Returns the sanitized user.
+ */
+export const changePassword = async (userId, { currentPassword, newPassword } = {}) => {
+  if (!currentPassword || !newPassword) {
+    throw httpError('currentPassword and newPassword are required', 400);
+  }
+  if (String(newPassword).length < 6) {
+    throw httpError('New password must be at least 6 characters', 400);
+  }
+
+  // password is select:false — pull it in explicitly for the comparison.
+  const user = await User.findById(userId).select('+password');
+  if (!user) throw httpError('User not found', 404);
+
+  const matches = await bcrypt.compare(currentPassword, user.password);
+  if (!matches) {
+    throw httpError('Current password is incorrect', 401);
+  }
+
+  user.password = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  await user.save();
+
+  return sanitize(user);
+};

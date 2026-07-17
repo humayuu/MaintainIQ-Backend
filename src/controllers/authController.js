@@ -1,4 +1,9 @@
-import { registerUser, loginUser } from '../services/authService.js';
+import {
+  registerUser,
+  loginUser,
+  updateProfile,
+  changePassword,
+} from '../services/authService.js';
 import { generateToken } from '../utils/jwt.js';
 import asyncHandler from '../utils/asyncHandler.js';
 
@@ -49,4 +54,24 @@ export const login = asyncHandler(async (req, res) => {
  */
 export const getMe = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: { user: req.user } });
+});
+
+/**
+ * PUT /api/auth/me  (protected)
+ * Updates the caller's own profile (name / avatarUrl only).
+ */
+export const updateMe = asyncHandler(async (req, res) => {
+  const { name, avatarUrl } = req.body;
+  const user = await updateProfile(req.user._id, { name, avatarUrl });
+  res.status(200).json({ success: true, data: { user } });
+});
+
+/**
+ * PUT /api/auth/me/password  (protected)
+ * Changes the caller's own password after verifying the current one.
+ */
+export const changeMyPassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  await changePassword(req.user._id, { currentPassword, newPassword });
+  res.status(200).json({ success: true, message: 'Password updated successfully' });
 });

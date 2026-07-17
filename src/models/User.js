@@ -23,6 +23,13 @@ const userSchema = new mongoose.Schema({
     enum: ['admin', 'technician', 'supervisor'],
     required: true,
   },
+  // Optional Cloudinary URL for the user's profile photo. Empty string = no
+  // avatar (the UI falls back to an initial). Uploaded via /api/uploads.
+  avatarUrl: {
+    type: String,
+    default: '',
+    trim: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
