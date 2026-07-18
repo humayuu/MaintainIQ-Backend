@@ -66,7 +66,7 @@ const buildFallback = (complaint = '') => {
   const title = words.length ? words.join(' ') : 'New reported issue';
   return {
     title,
-    category: 'Uncategorized',
+    category: '',
     priority: 'Medium',
     possibleCauses: [],
     initialChecks: [],

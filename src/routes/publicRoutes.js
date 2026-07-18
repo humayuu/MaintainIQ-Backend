@@ -8,6 +8,8 @@ import {
 import { uploadEvidence } from '../controllers/uploadController.js';
 import { publicIssueLimiter } from '../middleware/rateLimiter.js';
 import { uploadEvidenceFiles } from '../middleware/upload.js';
+import { validate } from '../middleware/validate.js';
+import { submitIssueSchema, triageIssueSchema } from '../validators/issueValidators.js';
 
 const router = Router();
 
@@ -19,9 +21,19 @@ router.get('/assets/:slug', getPublicAsset);
 router.post('/uploads', publicIssueLimiter, uploadEvidenceFiles, uploadEvidence);
 
 // Step 1: AI triage preview (saves nothing). Rate-limited (public + calls AI).
-router.post('/assets/:slug/issues/triage', publicIssueLimiter, triageIssuePreview);
+router.post(
+  '/assets/:slug/issues/triage',
+  publicIssueLimiter,
+  validate(triageIssueSchema),
+  triageIssuePreview,
+);
 
 // Step 2: submit the reviewed issue. Rate-limited (public-facing).
-router.post('/assets/:slug/issues', publicIssueLimiter, submitIssue);
+router.post(
+  '/assets/:slug/issues',
+  publicIssueLimiter,
+  validate(submitIssueSchema),
+  submitIssue,
+);
 
 export default router;
