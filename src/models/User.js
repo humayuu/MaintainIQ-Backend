@@ -30,23 +30,6 @@ const userSchema = new mongoose.Schema({
     default: '',
     trim: true,
   },
-  // Email verification (Phase 1: non-blocking — used for a "verify your email"
-  // banner, NOT to gate login). Existing users predate this field, so it will
-  // read as `undefined` for them; the UI only nags when it is explicitly false.
-  emailVerified: {
-    type: Boolean,
-    default: false,
-  },
-  // Single-use verification token + expiry. `select: false` so they never leak
-  // in normal queries or API responses.
-  verificationToken: {
-    type: String,
-    select: false,
-  },
-  verificationTokenExpiresAt: {
-    type: Date,
-    select: false,
-  },
   createdAt: {
     type: Date,
     default: Date.now,

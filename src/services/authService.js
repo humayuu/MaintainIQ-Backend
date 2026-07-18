@@ -1,23 +1,8 @@
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
 
 import User from '../models/User.js';
-import { sendVerificationEmail } from './emailService.js';
 
 const SALT_ROUNDS = 10;
-const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-// Create a fresh single-use verification token + its expiry timestamp.
-const newVerification = () => ({
-  verificationToken: crypto.randomBytes(32).toString('hex'),
-  verificationTokenExpiresAt: new Date(Date.now() + VERIFICATION_TTL_MS),
-});
-
-// Build the frontend link the user clicks to verify their email.
-const buildVerifyLink = (token) => {
-  const base = process.env.FRONTEND_URL || 'http://localhost:5173';
-  return `${base.replace(/\/$/, '')}/verify-email?token=${token}`;
-};
 
 /**
  * Reusable authentication logic. Controllers orchestrate request/response;
@@ -31,9 +16,6 @@ const buildVerifyLink = (token) => {
 const sanitize = (userDoc) => {
   const obj = userDoc.toObject ? userDoc.toObject() : { ...userDoc };
   delete obj.password;
-  // Never expose the verification token/expiry, even if a query selected them.
-  delete obj.verificationToken;
-  delete obj.verificationTokenExpiresAt;
   return obj;
 };
 
@@ -54,64 +36,15 @@ export const registerUser = async ({ name, email, password, role }) => {
   }
 
   const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-  const verification = newVerification();
 
   const user = await User.create({
     name,
     email,
     password: hashedPassword,
     role,
-    emailVerified: false,
-    ...verification,
   });
 
-  // Fire the verification email (non-blocking: send failures never fail signup).
-  await sendVerificationEmail(user.email, buildVerifyLink(verification.verificationToken));
-
   return sanitize(user);
-};
-
-/**
- * Verify an account from its emailed token. Returns a status string so the
- * controller can respond/redirect precisely:
- *   'verified'         — token matched, account is now verified
- *   'already-verified' — token already consumed but that email is verified
- *   'invalid'          — no matching, unexpired token
- */
-export const verifyEmailToken = async (token) => {
-  if (!token) return 'invalid';
-
-  const user = await User.findOne({
-    verificationToken: token,
-    verificationTokenExpiresAt: { $gt: new Date() },
-  }).select('+verificationToken +verificationTokenExpiresAt');
-
-  if (!user) return 'invalid';
-
-  user.emailVerified = true;
-  user.verificationToken = undefined;
-  user.verificationTokenExpiresAt = undefined;
-  await user.save();
-
-  return 'verified';
-};
-
-/**
- * Re-issue a verification token + email for the given user. No-ops (returns
- * 'already-verified') if the account is already verified.
- */
-export const resendVerification = async (userId) => {
-  const user = await User.findById(userId);
-  if (!user) throw httpError('User not found', 404);
-  if (user.emailVerified) return 'already-verified';
-
-  const verification = newVerification();
-  user.verificationToken = verification.verificationToken;
-  user.verificationTokenExpiresAt = verification.verificationTokenExpiresAt;
-  await user.save();
-
-  await sendVerificationEmail(user.email, buildVerifyLink(verification.verificationToken));
-  return 'sent';
 };
 
 /**

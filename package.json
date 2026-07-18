@@ -27,7 +27,6 @@
     "morgan": "^1.11.0",
     "multer": "^2.2.0",
     "node-cache": "^5.1.2",
-    "nodemailer": "^9.0.3",
     "qrcode": "^1.5.4",
     "zod": "^4.4.3"
   },

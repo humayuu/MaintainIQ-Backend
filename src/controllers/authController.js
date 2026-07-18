@@ -3,8 +3,6 @@ import {
   loginUser,
   updateProfile,
   changePassword,
-  verifyEmailToken,
-  resendVerification,
 } from '../services/authService.js';
 import { generateToken } from '../utils/jwt.js';
 import asyncHandler from '../utils/asyncHandler.js';
@@ -48,44 +46,6 @@ export const login = asyncHandler(async (req, res) => {
   const token = signFor(user);
 
   res.status(200).json({ success: true, data: { user, token } });
-});
-
-/**
- * POST /api/auth/verify
- * Verifies an account from its emailed token. Public (the user isn't logged in
- * when they click the link). Body: { token }.
- */
-export const verifyEmail = asyncHandler(async (req, res) => {
-  const { token } = req.body;
-  const status = await verifyEmailToken(token);
-
-  if (status === 'invalid') {
-    const err = new Error('This verification link is invalid or has expired.');
-    err.statusCode = 400;
-    throw err;
-  }
-
-  res.status(200).json({
-    success: true,
-    message: 'Email verified successfully',
-    data: { status },
-  });
-});
-
-/**
- * POST /api/auth/resend-verification  (protected)
- * Re-sends the verification email to the logged-in user.
- */
-export const resendVerificationEmail = asyncHandler(async (req, res) => {
-  const status = await resendVerification(req.user._id);
-  res.status(200).json({
-    success: true,
-    message:
-      status === 'already-verified'
-        ? 'Your email is already verified'
-        : 'Verification email sent',
-    data: { status },
-  });
 });
 
 /**

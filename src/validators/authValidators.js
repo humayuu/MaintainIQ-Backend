@@ -31,10 +31,6 @@ export const loginSchema = z.object({
   password: z.string({ message: 'Password is required' }).min(1, 'Password is required'),
 });
 
-export const verifyEmailSchema = z.object({
-  token: z.string({ message: 'Verification token is required' }).min(1, 'Verification token is required'),
-});
-
 export const changePasswordSchema = z.object({
   currentPassword: z
     .string({ message: 'Current password is required' })
